@@ -1,4 +1,4 @@
-![Logo](link)
+![Logo](WFix-core_logo.png)
 
 # 🛠️ WFix-Core
 
@@ -10,7 +10,7 @@ Progettato per essere sicuro, modulare e leggibile, è pensato sia per utenti av
 
 ![PowerShell Script](https://img.shields.io/badge/PowerShell-7+-blue?logo=powershell)
 ![Windows](https://img.shields.io/badge/Platform-Windows-blue?logo=windows)
-![Licenza](https://img.shields.io/github/license/gaumeltoh/windows-repair-interactive)
+![Licenza](https://img.shields.io/github/license/gaumeltoh/WFix-Core)
 
 ---
 
