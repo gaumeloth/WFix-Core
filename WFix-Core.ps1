@@ -71,21 +71,21 @@ if ($selectedSteps -contains "1") {
 
 if ($selectedSteps -contains "2") {
     Write-Log "[2] Avvio DISM..."
-    dism /Online /Cleanup-Image /ScanHealth >> $MasterLog 2>&1
-    dism /Online /Cleanup-Image /RestoreHealth >> $MasterLog 2>&1
+    dism /Online /Cleanup-Image /ScanHealth >> "$MasterLog" 2>&1
+    dism /Online /Cleanup-Image /RestoreHealth >> "$MasterLog" 2>&1
     Write-Log "DISM completato."
 }
 
 if ($selectedSteps -contains "3") {
     Write-Log "[3] Avvio SFC..."
-    sfc /scannow >> $MasterLog 2>&1
+    sfc /scannow >> "$MasterLog" 2>&1
     Write-Log "SFC completato."
 }
 
 if ($selectedSteps -contains "4") {
     Write-Log "[4] Ripristino rete..."
-    netsh winsock reset >> $MasterLog 2>&1
-    netsh int ip reset >> $MasterLog 2>&1
+    netsh winsock reset >> "$MasterLog" 2>&1
+    netsh int ip reset >> "$MasterLog" 2>&1
     Write-Log "Stack di rete ripristinato."
 }
 

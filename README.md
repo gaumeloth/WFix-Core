@@ -57,8 +57,8 @@ WFixLogs/
 1. Scarica o clona il repository:
 
 ```bash
-git clone https://github.com/gaumeltoh/WFix-Core.git
-cd windows-repair-interactive
+git clone https://github.com/gaumeloth/WFix-Core.git
+cd WFix-Core
 ```
 
 2. Esegui PowerShell come **amministratore**
@@ -102,4 +102,4 @@ Distribuito sotto licenza MIT. Vedi `LICENSE` per dettagli.
 
 Creato da **Gaumeloth** per uso tecnico e di assistenza sistemistica.
 
-Per suggerimenti, fork, migliorie o bug: [Apri una Issue](https://github.com/gaumeltoh/WFix-Core/issues)
+Per suggerimenti, fork, migliorie o bug: [Apri una Issue](https://github.com/gaumeloth/WFix-Core/issues)
