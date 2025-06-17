@@ -1,4 +1,4 @@
-![Logo](WFix-core_logo.png)
+[![Logo](WFix-core_logo.png)](https://github.com/gaumeloth/WFix-Core)
 
 # 🛠️ WFix-Core
 
@@ -8,10 +8,9 @@
 Dal kernel NTFS al Component Store, dalla rete Winsock ai file di sistema, WFix-Core esegue interventi critici con log dettagliati e controllo completo da terminale.
 Progettato per essere sicuro, modulare e leggibile, è pensato sia per utenti avanzati che per professionisti IT.
 
-![PowerShell Script](https://img.shields.io/badge/PowerShell-7+-blue?logo=powershell)
-![Windows](https://img.shields.io/badge/Platform-Windows-blue?logo=windows)
-![Licenza](https://img.shields.io/github/license/gaumeltoh/WFix-Core)
-
+[![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue?logo=powershell)](https://learn.microsoft.com/en-us/powershell/)
+[![Windows](https://img.shields.io/badge/Platform-Windows-blue?logo=windows)](https://www.microsoft.com/windows)
+[![Licenza](https://img.shields.io/github/license/gaumeloth/WFix-Core)](https://github.com/gaumeloth/WFix-Core/blob/main/LICENSE)
 ---
 
 ## 📋 Funzionalità
