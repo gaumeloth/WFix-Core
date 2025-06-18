@@ -33,14 +33,28 @@ function Check-ExitCode($label, [int]$exitCode = $LASTEXITCODE) {
     if ($exitCode -ne 0) {
       $msg = "WARNING: $label ha restituito codice $LASTEXITCODE"
       Write-Log $msg
-      $global:FailureMessages += $msg
+      $script:FailureMessages += $msg
     }
   }
+
+function Test-DriveValid {
+    param([string]$Drive)
+    $d = $Drive.Trim()
+    if ($d -notmatch '^[A-Za-z]:$') { return $false }
+    return (Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Name -eq $d.TrimEnd(':') }).Count -gt 0
+}
+
+function Test-SafePath {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $false }
+    if ($Path -match "\.\." -or $Path -match "[|&]") { return $false }
+    return $true
+}
 
 # ╔═════[ SETUP ]═════╗
 $LogDir = "$env:USERPROFILE\Desktop\WFixLogs"
 $MasterLog = "$LogDir\repair-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-$global:FailureMessages = @()
+$script:FailureMessages = @()
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 
 if (-not ([Security.Principal.WindowsPrincipal] `
@@ -90,10 +104,15 @@ if ($selectedSteps -contains "1") {
       }
     } while ($true)
     $drive = "$drives[$index - 1]:"
-    $log = "$LogDir\chkdsk.log"
-    $process = Start-Process cmd.exe "/c echo y| chkdsk $drive /f /r > `"$log`"" -Wait -PassThru
-    Check-ExitCode "CHKDSK" $process.ExitCode
-    Write-Log "CHKDSK completato. Log: $log"
+    if (Test-DriveValid $drive) {
+        $log = "$LogDir\chkdsk.log"
+        'Y' | & chkdsk.exe $drive '/f' '/r' 2>&1 | Tee-Object -FilePath $log > $null
+        $exitCode = $LASTEXITCODE
+        Check-ExitCode "CHKDSK" $exitCode
+        Write-Log "CHKDSK completato. Log: $log"
+    } else {
+        Write-Log "Drive non valido: $drive"
+    }
 }
 
 if ($selectedSteps -contains "2") {
@@ -148,10 +167,15 @@ if ($selectedSteps -contains "5") {
     } else {
         $path = Read-Host "Percorso file .inf o cartella driver (vuoto per saltare)"
         if ($path) {
-            Write-Log "Installazione driver da $path..."
-            pnputil.exe /add-driver "$path" /install >> "$MasterLog" 2>&1
-            Check-ExitCode "pnputil install"
-            Write-Log "Driver installati da $path."
+            if (Test-SafePath $path) {
+                Write-Log "Installazione driver da $path..."
+                pnputil.exe /add-driver "$path" /install >> "$MasterLog" 2>&1
+                Check-ExitCode "pnputil install"
+                Write-Log "Driver installati da $path."
+            } else {
+                Write-Log "Percorso non valido o insicuro: $path"
+                Write-Host "Percorso driver non valido. Operazione annullata." -ForegroundColor red
+            }
         }
     }
 }
@@ -160,13 +184,13 @@ Export-EventLogs
 
 # ╔═════[ CONCLUSIONE ]═════╗
 Write-Log "=== Script terminato ==="
-if ($FailureMessages.Count -gt 0) {
+if ($Script:FailureMessages.Count -gt 0) {
     Write-Log "=== Riepilogo errori ==="
-    foreach ($msg in $FailureMessages) {
+    foreach ($msg in $Script:FailureMessages) {
         Write-Log $msg
     }
     Write-Host "`n⚠️ Problemi rilevati durante l'esecuzione:"
-    foreach ($msg in $FailureMessages) {
+    foreach ($msg in $Script:FailureMessages) {
         Write-Host " - $msg"
     }
     Write-Host "Controlla il log principale per maggiori dettagli."
