@@ -24,14 +24,23 @@ function Export-EventLogs {
 
 function Prompt-YesNo($msg) {
     do {
-        $choice = Read-Host "$msg (Y/N)"
-    } while ($choice -notmatch '^[YyNn]$')
-    return $choice -match '^[Yy]$'
+        $choice = Read-Host "$msg (S/n)"
+    } while ($choice -notmatch '^[SsNn]$')
+    return $choice -match '^[Ss]$'
 }
+
+function Check-ExitCode($label) {
+    if ($LASTEXITCODE -ne 0) {
+      $msg = "WARNING: $label ha restituito codice $LASTEXITCODE"
+      Write-Log $msg
+      $global:FailureMessages += $msg
+    }
+  }
 
 # ╔═════[ SETUP ]═════╗
 $LogDir = "$env:USERPROFILE\Desktop\WFixLogs"
 $MasterLog = "$LogDir\repair-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+$global:FailureMessages = @()
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 
 if (-not ([Security.Principal.WindowsPrincipal] `
@@ -64,28 +73,43 @@ foreach ($key in $steps.Keys) {
 # ╔═════[ ESECUZIONE MODULI ]═════╗
 if ($selectedSteps -contains "1") {
     Write-Log "[1] Avvio CHKDSK..."
+    $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Free -gt 0 } | Select-Object -ExpandProperty Name
+    Write-Host "`nSeleziona il drive da controllare:"
+    for ($i = 0; $i -lt $drives.Count; $i++) {
+        $num = $i + 1
+        Write-Host "$num. $($drives[$i]):"
+    }
+    $choice = Read-Host "Scelta (default 1)"
+    if (-not $choice) { $choice = 1 }
+    $drive = "$($drives[[int]$choice - 1]):"
     $log = "$LogDir\chkdsk.log"
-    Start-Process cmd.exe "/c echo y| chkdsk C: /f /r > `"$log`"" -Verb RunAs -Wait
+    Start-Process cmd.exe "/c echo y| chkdsk $drive /f /r > `"$log`"" -Wait
+    Check-ExitCode "CHKDSK"
     Write-Log "CHKDSK completato. Log: $log"
 }
 
 if ($selectedSteps -contains "2") {
     Write-Log "[2] Avvio DISM..."
     dism /Online /Cleanup-Image /ScanHealth >> "$MasterLog" 2>&1
+    Check-ExitCode "DISM ScanHealth"
     dism /Online /Cleanup-Image /RestoreHealth >> "$MasterLog" 2>&1
+    Check-ExitCode "DISM RestoreHealth"
     Write-Log "DISM completato."
 }
 
 if ($selectedSteps -contains "3") {
     Write-Log "[3] Avvio SFC..."
     sfc /scannow >> "$MasterLog" 2>&1
+    Check-ExitCode "SFC"
     Write-Log "SFC completato."
 }
 
 if ($selectedSteps -contains "4") {
     Write-Log "[4] Ripristino rete..."
     netsh winsock reset >> "$MasterLog" 2>&1
+    Check-ExitCode "netsh winsock reset"
     netsh int ip reset >> "$MasterLog" 2>&1
+    Check-ExitCode "netsh int ip reset"
     Write-Log "Stack di rete ripristinato."
 }
 
