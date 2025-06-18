@@ -29,8 +29,8 @@ function Prompt-YesNo($msg) {
     return $choice -match '^[Ss]$'
 }
 
-function Check-ExitCode($label) {
-    if ($LASTEXITCODE -ne 0) {
+function Check-ExitCode($label, [int]$exitCode = $LASTEXITCODE) {
+    if ($exitCode -ne 0) {
       $msg = "WARNING: $label ha restituito codice $LASTEXITCODE"
       Write-Log $msg
       $global:FailureMessages += $msg
@@ -79,12 +79,20 @@ if ($selectedSteps -contains "1") {
         $num = $i + 1
         Write-Host "$num. $($drives[$i]):"
     }
-    $choice = Read-Host "Scelta (default 1)"
-    if (-not $choice) { $choice = 1 }
-    $drive = "$($drives[[int]$choice - 1]):"
+    $index = 0
+    do {
+      $input = Read-Host "Scelta (default 1)"
+      if (-not $input) {$input = '1'}
+      if ([int]::TryParse($input, [ref]$index) -and $index -ge 1 -and $index -le $drives.Count) {
+        break
+      } else {
+        Write-Host "Input non valido. Inserisci un numero tra 1 e $($drives.Count)." -ForegroundColor red
+      }
+    } while ($true)
+    $drive = "$drives[$index - 1]:"
     $log = "$LogDir\chkdsk.log"
-    Start-Process cmd.exe "/c echo y| chkdsk $drive /f /r > `"$log`"" -Wait
-    Check-ExitCode "CHKDSK"
+    $process = Start-Process cmd.exe "/c echo y| chkdsk $drive /f /r > `"$log`"" -Wait -PassThru
+    Check-ExitCode "CHKDSK" $process.ExitCode
     Write-Log "CHKDSK completato. Log: $log"
 }
 
@@ -114,11 +122,55 @@ if ($selectedSteps -contains "4") {
 }
 
 if ($selectedSteps -contains "5") {
-    Export-EventLogs
+    Write-Log "[6] Verifica driver installati..."
+    $driverLog = "$LogDir\drivers.txt"
+    try {
+        Get-PnpDevice | Sort-Object FriendlyName | Out-File -FilePath $driverLog
+        Write-Log "Elenco driver salvato in $driverLog"
+    } catch {
+        Write-Log "Errore durante la generazione dell'elenco driver: $_"
+    }
+
+    if (Prompt-YesNo "Vuoi cercare i driver tramite Windows Update?") {
+        if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate)) {
+            Write-Log "Installazione modulo PSWindowsUpdate..."
+            Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+        }
+        Import-Module PSWindowsUpdate -ErrorAction SilentlyContinue
+        if (Get-Command Get-WindowsUpdate -ErrorAction SilentlyContinue) {
+            Write-Log "Ricerca e installazione driver..."
+            Get-WindowsUpdate -MicrosoftUpdate -Category Drivers -AcceptAll -Install -AutoReboot:$false >> "$MasterLog" 2>&1
+            Check-ExitCode "WindowsUpdate Driver Install"
+            Write-Log "Aggiornamento driver completato."
+        } else {
+            Write-Log "Modulo PSWindowsUpdate non disponibile."
+        }
+    } else {
+        $path = Read-Host "Percorso file .inf o cartella driver (vuoto per saltare)"
+        if ($path) {
+            Write-Log "Installazione driver da $path..."
+            pnputil.exe /add-driver "$path" /install >> "$MasterLog" 2>&1
+            Check-ExitCode "pnputil install"
+            Write-Log "Driver installati da $path."
+        }
+    }
 }
+
+Export-EventLogs
 
 # ╔═════[ CONCLUSIONE ]═════╗
 Write-Log "=== Script terminato ==="
+if ($FailureMessages.Count -gt 0) {
+    Write-Log "=== Riepilogo errori ==="
+    foreach ($msg in $FailureMessages) {
+        Write-Log $msg
+    }
+    Write-Host "`n⚠️ Problemi rilevati durante l'esecuzione:"
+    foreach ($msg in $FailureMessages) {
+        Write-Host " - $msg"
+    }
+    Write-Host "Controlla il log principale per maggiori dettagli."
+}
 Write-Host "`n✅ Tutte le operazioni selezionate sono state completate."
 Write-Host "📄 Log master salvato in: `"$MasterLog`""
 Write-Host "📂 Cartella completa: $LogDir"

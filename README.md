@@ -20,6 +20,7 @@ Progettato per essere sicuro, modulare e leggibile, è pensato sia per utenti av
 ✅ DISM (riparazione immagine Windows)  
 ✅ SFC (riparazione file di sistema)  
 ✅ NETSH (ripristino rete)  
+✅ verifica ed aggiornamento driver (pnputil/WindowsUpdate)
 ✅ Esportazione EventLog (System, Application, DISM, WindowsUpdate)  
 ✅ Logging completo per debugging o analisi post-mortem
 
@@ -27,7 +28,7 @@ Progettato per essere sicuro, modulare e leggibile, è pensato sia per utenti av
 
 ## 📂 Struttura dei Log
 
-Alla fine della scansione troverai una directory `WFix-Core` sul Desktop contenente:
+Alla fine della scansione troverai una directory `WFixLogs` sul Desktop contenente:
 
 ```
 WFixLogs/
@@ -47,6 +48,7 @@ WFixLogs/
 - PowerShell 5.1 o superiore (incluso in Windows 10/11)
 - Privilegi di amministratore
 - Sistema operativo: **Windows 10, 11, Server 2016+**
+- (Opzionale) Connettività Internet e modulo `PSWindowsUpdate` per installare i driver
 
 ---
 
