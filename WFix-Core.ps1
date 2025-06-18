@@ -59,7 +59,7 @@ $steps = @{
     "2" = "DISM (ripara immagine Windows)"
     "3" = "SFC (verifica file di sistema)"
     "4" = "NETSH (reset rete TCP/IP)"
-    "5" = "Esportazione EventLog"
+    "5" = "Aggiorna driver"
 }
 Write-Host "`nSeleziona gli strumenti da eseguire:"
 $selectedSteps = @()

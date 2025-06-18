@@ -20,7 +20,7 @@ Progettato per essere sicuro, modulare e leggibile, è pensato sia per utenti av
 ✅ DISM (riparazione immagine Windows)  
 ✅ SFC (riparazione file di sistema)  
 ✅ NETSH (ripristino rete)  
-✅ verifica ed aggiornamento driver (pnputil/WindowsUpdate)
+✅ verifica ed aggiornamento driver (pnputil/WindowsUpdate)  
 ✅ Esportazione EventLog (System, Application, DISM, WindowsUpdate)  
 ✅ Logging completo per debugging o analisi post-mortem
 
