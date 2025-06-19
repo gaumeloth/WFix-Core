@@ -31,7 +31,7 @@ function Prompt-YesNo($msg) {
 
 function Check-ExitCode($label, [int]$exitCode = $LASTEXITCODE) {
     if ($exitCode -ne 0) {
-      $msg = "WARNING: $label ha restituito codice $LASTEXITCODE"
+      $msg = "WARNING: $label ha restituito codice $exitCode"
       Write-Log $msg
       $script:FailureMessages += $msg
     }
@@ -113,7 +113,7 @@ if ($selectedSteps -contains "1") {
     $drive = "$drives[$index - 1]:"
     if (Test-DriveValid $drive) {
         $log = "$LogDir\chkdsk.log"
-        'Y' | & chkdsk.exe $drive '/f' '/r' 2>&1 | Tee-Object -FilePath $log > $null
+        'Y' | & chkdsk.exe $drive '/f' '/r' 2>&1 | Tee-Object -FilePath $log
         $exitCode = $LASTEXITCODE
         Check-ExitCode "CHKDSK" $exitCode
         Write-Log "CHKDSK completato. Log: $log"
@@ -124,30 +124,25 @@ if ($selectedSteps -contains "1") {
 
 if ($selectedSteps -contains "2") {
     Write-Log "[2] Avvio DISM..."
-    dism /Online /Cleanup-Image /ScanHealth >> 2>&1 |
-      Tee-Object -FilePath $dismLog -Append > $null
+    dism /Online /Cleanup-Image /ScanHealth 2>&1 | Tee-Object -FilePath $dismLog -Append
     Check-ExitCode "DISM ScanHealth"
-    dism /Online /Cleanup-Image /RestoreHealth >> 2>&1 |
-      Tee-Object -FilePath $dismLog -Append > $null
+    dism /Online /Cleanup-Image /RestoreHealth 2>&1 | Tee-Object -FilePath $dismLog -Append
     Check-ExitCode "DISM RestoreHealth"
     Write-Log "DISM completato. Log: $dismLog"
 }
 
 if ($selectedSteps -contains "3") {
     Write-Log "[3] Avvio SFC..."
-    sfc /scannow >> 2>&1 |
-      Tee-Object -FilePath $sfcLog -Append > $null
+    sfc /scannow 2>&1 | Tee-Object -FilePath $sfcLog -Append
     Check-ExitCode "SFC"
     Write-Log "SFC completato. Log: $sfcLog"
 }
 
 if ($selectedSteps -contains "4") {
     Write-Log "[4] Ripristino rete..."
-    netsh winsock reset >> 2>&1 | 
-      Tee-Object -FilePath $netshLog -Append > $null
+    netsh winsock reset 2>&1 |  Tee-Object -FilePath $netshLog -Append
     Check-ExitCode "netsh winsock reset"
-    netsh int ip reset >> 2>&1
-      Tee-Object -FilePath $netshLog -Append > $null
+    netsh int ip reset 2>&1 | Tee-Object -FilePath $netshLog -Append
     Check-ExitCode "netsh int ip reset"
     Write-Log "Stack di rete ripristinato. Log: $netshLog"
 }
@@ -169,8 +164,7 @@ if ($selectedSteps -contains "5") {
         Import-Module PSWindowsUpdate -ErrorAction SilentlyContinue
         if (Get-Command Get-WindowsUpdate -ErrorAction SilentlyContinue) {
             Write-Log "Ricerca e installazione driver..."
-            Get-WindowsUpdate -MicrosoftUpdate -Category Drivers -AcceptAll -Install -AutoReboot:$false >> 2>&1 |
-              Tee-Object -FilePath $driver0Log -Append > $null
+            Get-WindowsUpdate -MicrosoftUpdate -Category Drivers -AcceptAll -Install -AutoReboot:$false 2>&1 | Tee-Object -FilePath $driver0Log -Append
             Check-ExitCode "WindowsUpdate Driver Install"
             Write-Log "Aggiornamento driver completato. Log: $driver0Log"
         } else {
@@ -181,8 +175,7 @@ if ($selectedSteps -contains "5") {
         if ($path) {
             if (Test-SafePath $path) {
                 Write-Log "Installazione driver da $path..."
-                pnputil.exe /add-driver "$path" /install >> 2>&1 |
-                  Tee-Object -FilePath $driver0Log -Append > $null
+                pnputil.exe /add-driver "$path" /install 2>&1 | Tee-Object -FilePath $driver0Log -Append
                 Check-ExitCode "pnputil install"
                 Write-Log "Driver installati da $path. Log: $driver0Log"
             } else {
