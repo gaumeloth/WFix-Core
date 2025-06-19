@@ -52,8 +52,15 @@ function Test-SafePath {
 }
 
 # ╔═════[ SETUP ]═════╗
-$LogDir = "$env:USERPROFILE\Desktop\WFixLogs"
-$MasterLog = "$LogDir\repair-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+$timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$LogDir = "$env:USERPROFILE\Desktop\WFixLogs\$timestamp"
+$MasterLog = "$LogDir\repair.log"
+# Log individual tools
+$dismLog = "$LogDir\dism.log"
+$sfcLog = "$LogDir\sfc.log"
+$netshLog = "$LogDir\netsh.log"
+$driver0Log = "$LogDir\driver0ps.log"
+$driversListLog = "$LogDir\drivers.txt"
 $script:FailureMessages = @()
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 
@@ -117,35 +124,39 @@ if ($selectedSteps -contains "1") {
 
 if ($selectedSteps -contains "2") {
     Write-Log "[2] Avvio DISM..."
-    dism /Online /Cleanup-Image /ScanHealth >> "$MasterLog" 2>&1
+    dism /Online /Cleanup-Image /ScanHealth >> 2>&1 |
+      Tee-Object -FilePath $dismLog -Append > $null
     Check-ExitCode "DISM ScanHealth"
-    dism /Online /Cleanup-Image /RestoreHealth >> "$MasterLog" 2>&1
+    dism /Online /Cleanup-Image /RestoreHealth >> 2>&1 |
+      Tee-Object -FilePath $dismLog -Append > $null
     Check-ExitCode "DISM RestoreHealth"
-    Write-Log "DISM completato."
+    Write-Log "DISM completato. Log: $dismLog"
 }
 
 if ($selectedSteps -contains "3") {
     Write-Log "[3] Avvio SFC..."
-    sfc /scannow >> "$MasterLog" 2>&1
+    sfc /scannow >> 2>&1 |
+      Tee-Object -FilePath $sfcLog -Append > $null
     Check-ExitCode "SFC"
-    Write-Log "SFC completato."
+    Write-Log "SFC completato. Log: $sfcLog"
 }
 
 if ($selectedSteps -contains "4") {
     Write-Log "[4] Ripristino rete..."
-    netsh winsock reset >> "$MasterLog" 2>&1
+    netsh winsock reset >> 2>&1 | 
+      Tee-Object -FilePath $netshLog -Append > $null
     Check-ExitCode "netsh winsock reset"
-    netsh int ip reset >> "$MasterLog" 2>&1
+    netsh int ip reset >> 2>&1
+      Tee-Object -FilePath $netshLog -Append > $null
     Check-ExitCode "netsh int ip reset"
-    Write-Log "Stack di rete ripristinato."
+    Write-Log "Stack di rete ripristinato. Log: $netshLog"
 }
 
 if ($selectedSteps -contains "5") {
-    Write-Log "[6] Verifica driver installati..."
-    $driverLog = "$LogDir\drivers.txt"
+    Write-Log "[5] Verifica driver installati..."
     try {
-        Get-PnpDevice | Sort-Object FriendlyName | Out-File -FilePath $driverLog
-        Write-Log "Elenco driver salvato in $driverLog"
+        Get-PnpDevice | Sort-Object FriendlyName | Out-File -FilePath $driversListLog
+        Write-Log "Elenco driver salvato in $driversListLog"
     } catch {
         Write-Log "Errore durante la generazione dell'elenco driver: $_"
     }
@@ -158,9 +169,10 @@ if ($selectedSteps -contains "5") {
         Import-Module PSWindowsUpdate -ErrorAction SilentlyContinue
         if (Get-Command Get-WindowsUpdate -ErrorAction SilentlyContinue) {
             Write-Log "Ricerca e installazione driver..."
-            Get-WindowsUpdate -MicrosoftUpdate -Category Drivers -AcceptAll -Install -AutoReboot:$false >> "$MasterLog" 2>&1
+            Get-WindowsUpdate -MicrosoftUpdate -Category Drivers -AcceptAll -Install -AutoReboot:$false >> 2>&1 |
+              Tee-Object -FilePath $driver0Log -Append > $null
             Check-ExitCode "WindowsUpdate Driver Install"
-            Write-Log "Aggiornamento driver completato."
+            Write-Log "Aggiornamento driver completato. Log: $driver0Log"
         } else {
             Write-Log "Modulo PSWindowsUpdate non disponibile."
         }
@@ -169,9 +181,10 @@ if ($selectedSteps -contains "5") {
         if ($path) {
             if (Test-SafePath $path) {
                 Write-Log "Installazione driver da $path..."
-                pnputil.exe /add-driver "$path" /install >> "$MasterLog" 2>&1
+                pnputil.exe /add-driver "$path" /install >> 2>&1 |
+                  Tee-Object -FilePath $driver0Log -Append > $null
                 Check-ExitCode "pnputil install"
-                Write-Log "Driver installati da $path."
+                Write-Log "Driver installati da $path. Log: $driver0Log"
             } else {
                 Write-Log "Percorso non valido o insicuro: $path"
                 Write-Host "Percorso driver non valido. Operazione annullata." -ForegroundColor red
