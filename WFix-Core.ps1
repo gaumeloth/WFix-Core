@@ -7,7 +7,7 @@ function Write-Log {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $line = "[$timestamp] $Message"
     Write-Output $line
-    Add-Content -Path $global:MasterLog -Value $line
+    Add-Content -Path $MasterLog -Value $line
 }
 
 function Export-EventLogs {
@@ -202,8 +202,8 @@ if ($Script:FailureMessages.Count -gt 0) {
     Write-Host "Controlla il log principale per maggiori dettagli."
 }
 Write-Host "`n✅ Tutte le operazioni selezionate sono state completate."
-Write-Host "📄 Log master salvato in: `"$MasterLog`""
-Write-Host "📂 Cartella completa: $LogDir"
+Write-Host "Log master salvato in: `"$MasterLog`""
+Write-Host "Cartella completa: $LogDir"
 
 if (Prompt-YesNo "Vuoi aprire la cartella dei log ora?") {
     Start-Process "explorer.exe" $LogDir
