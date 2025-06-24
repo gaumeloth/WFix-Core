@@ -3,11 +3,14 @@
 # Autore: Gaumeloth
 
 function Write-Log {
-    param([string]$Message)
+    param(
+          [string]$Message
+          [string]$Loghpath
+          )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $line = "[$timestamp] $Message"
     Write-Output $line
-    Add-Content -Path $MasterLog -Value $line
+    Add-Content -Path $Loghpath -Value $line
 }
 
 function Export-EventLogs {
