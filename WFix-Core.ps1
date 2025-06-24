@@ -4,7 +4,7 @@
 
 function Write-Log {
     param(
-          [string]$Message
+          [string]$Message,
           [string]$Loghpath
           )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -16,13 +16,13 @@ function Write-Log {
 function Export-EventLogs {
     $eventsDir = "$LogDir\EventLogs"
     New-Item -ItemType Directory -Path $eventsDir -Force | Out-Null
-    Write-Log "Esportazione EventLog..."
+    Write-Log "Esportazione EventLog..." $MasterLog
 
     Get-WinEvent -LogName "System" -MaxEvents 500 | Export-Clixml -Path "$eventsDir\System.xml"
     Get-WinEvent -LogName "Application" -MaxEvents 500 | Export-Clixml -Path "$eventsDir\Application.xml"
     Get-WinEvent -LogName "Microsoft-Windows-DISM/Operational" -MaxEvents 200 -ErrorAction SilentlyContinue | Export-Clixml -Path "$eventsDir\DISM.xml"
     Get-WinEvent -LogName "Microsoft-Windows-WindowsUpdateClient/Operational" -MaxEvents 200 -ErrorAction SilentlyContinue | Export-Clixml -Path "$eventsDir\WindowsUpdate.xml"
-    Write-Log "EventLog salvati in $eventsDir"
+    Write-Log "EventLog salvati in $eventsDir" $MasterLog
 }
 
 function Prompt-YesNo($msg) {
@@ -35,7 +35,7 @@ function Prompt-YesNo($msg) {
 function Check-ExitCode($label, [int]$exitCode = $LASTEXITCODE) {
     if ($exitCode -ne 0) {
       $msg = "WARNING: $label ha restituito codice $exitCode"
-      Write-Log $msg
+      Write-Log $msg $MasterLog
       $script:FailureMessages += $msg
     }
   }
@@ -75,7 +75,7 @@ if (-not ([Security.Principal.WindowsPrincipal] `
     exit
 }
 
-Write-Log "=== Riparazione di Windows Interattiva Avviata ==="
+Write-Log "=== Riparazione di Windows Interattiva Avviata ===" $MasterLog
 
 # ╔═════[ MENU INTERATTIVO ]═════╗
 $steps = @{
@@ -96,7 +96,7 @@ foreach ($key in $steps.Keys) {
 
 # ╔═════[ ESECUZIONE MODULI ]═════╗
 if ($selectedSteps -contains "1") {
-    Write-Log "[1] Avvio CHKDSK..."
+    Write-Log "[1] Avvio CHKDSK..." $MasterLog
     $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Free -gt 0 } | Select-Object -ExpandProperty Name
     Write-Host "`nSeleziona il drive da controllare:"
     for ($i = 0; $i -lt $drives.Count; $i++) {
@@ -119,70 +119,70 @@ if ($selectedSteps -contains "1") {
         'Y' | & chkdsk.exe $drive '/f' '/r' 2>&1 | Tee-Object -FilePath $log
         $exitCode = $LASTEXITCODE
         Check-ExitCode "CHKDSK" $exitCode
-        Write-Log "CHKDSK completato. Log: $log"
+        Write-Log "CHKDSK completato. Log: $log" $MasterLog
     } else {
-        Write-Log "Drive non valido: $drive"
+        Write-Log "Drive non valido: $drive" $MasterLog
     }
 }
 
 if ($selectedSteps -contains "2") {
-    Write-Log "[2] Avvio DISM..."
+    Write-Log "[2] Avvio DISM..." $MasterLog
     dism /Online /Cleanup-Image /ScanHealth 2>&1 | Tee-Object -FilePath $dismLog -Append
     Check-ExitCode "DISM ScanHealth"
     dism /Online /Cleanup-Image /RestoreHealth 2>&1 | Tee-Object -FilePath $dismLog -Append
     Check-ExitCode "DISM RestoreHealth"
-    Write-Log "DISM completato. Log: $dismLog"
+    Write-Log "DISM completato. Log: $dismLog" $MasterLog
 }
 
 if ($selectedSteps -contains "3") {
-    Write-Log "[3] Avvio SFC..."
+    Write-Log "[3] Avvio SFC..." $MasterLog
     sfc /scannow 2>&1 | Tee-Object -FilePath $sfcLog -Append
     Check-ExitCode "SFC"
-    Write-Log "SFC completato. Log: $sfcLog"
+    Write-Log "SFC completato. Log: $sfcLog" $MasterLog
 }
 
 if ($selectedSteps -contains "4") {
-    Write-Log "[4] Ripristino rete..."
+    Write-Log "[4] Ripristino rete..." $MasterLog
     netsh winsock reset 2>&1 |  Tee-Object -FilePath $netshLog -Append
     Check-ExitCode "netsh winsock reset"
     netsh int ip reset 2>&1 | Tee-Object -FilePath $netshLog -Append
     Check-ExitCode "netsh int ip reset"
-    Write-Log "Stack di rete ripristinato. Log: $netshLog"
+    Write-Log "Stack di rete ripristinato. Log: $netshLog" $MasterLog
 }
 
 if ($selectedSteps -contains "5") {
-    Write-Log "[5] Verifica driver installati..."
+    Write-Log "[5] Verifica driver installati..." $MasterLog
     try {
         Get-PnpDevice | Sort-Object FriendlyName | Out-File -FilePath $driversListLog
-        Write-Log "Elenco driver salvato in $driversListLog"
+        Write-Log "Elenco driver salvato in $driversListLog" $MasterLog
     } catch {
-        Write-Log "Errore durante la generazione dell'elenco driver: $_"
+        Write-Log "Errore durante la generazione dell'elenco driver: $_" $MasterLog
     }
 
     if (Prompt-YesNo "Vuoi cercare i driver tramite Windows Update?") {
         if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate)) {
-            Write-Log "Installazione modulo PSWindowsUpdate..."
+            Write-Log "Installazione modulo PSWindowsUpdate..." $MasterLog
             Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction SilentlyContinue
         }
         Import-Module PSWindowsUpdate -ErrorAction SilentlyContinue
         if (Get-Command Get-WindowsUpdate -ErrorAction SilentlyContinue) {
-            Write-Log "Ricerca e installazione driver..."
+            Write-Log "Ricerca e installazione driver..." $MasterLog
             Get-WindowsUpdate -MicrosoftUpdate -Category Drivers -AcceptAll -Install -AutoReboot:$false 2>&1 | Tee-Object -FilePath $driver0Log -Append
             Check-ExitCode "WindowsUpdate Driver Install"
-            Write-Log "Aggiornamento driver completato. Log: $driver0Log"
+            Write-Log "Aggiornamento driver completato. Log: $driver0Log" $MasterLog
         } else {
-            Write-Log "Modulo PSWindowsUpdate non disponibile."
+            Write-Log "Modulo PSWindowsUpdate non disponibile." $MasterLog
         }
     } else {
         $path = Read-Host "Percorso file .inf o cartella driver (vuoto per saltare)"
         if ($path) {
             if (Test-SafePath $path) {
-                Write-Log "Installazione driver da $path..."
+                Write-Log "Installazione driver da $path..." $MasterLog
                 pnputil.exe /add-driver "$path" /install 2>&1 | Tee-Object -FilePath $driver0Log -Append
                 Check-ExitCode "pnputil install"
-                Write-Log "Driver installati da $path. Log: $driver0Log"
+                Write-Log "Driver installati da $path. Log: $driver0Log" $MasterLog
             } else {
-                Write-Log "Percorso non valido o insicuro: $path"
+                Write-Log "Percorso non valido o insicuro: $path"  $MasterLog
                 Write-Host "Percorso driver non valido. Operazione annullata." -ForegroundColor red
             }
         }
@@ -192,11 +192,11 @@ if ($selectedSteps -contains "5") {
 Export-EventLogs
 
 # ╔═════[ CONCLUSIONE ]═════╗
-Write-Log "=== Script terminato ==="
+Write-Log "=== Script terminato ===" $MasterLog
 if ($Script:FailureMessages.Count -gt 0) {
-    Write-Log "=== Riepilogo errori ==="
+    Write-Log "=== Riepilogo errori ===" $MasterLog
     foreach ($msg in $Script:FailureMessages) {
-        Write-Log $msg
+        Write-Log $msg $MasterLog
     }
     Write-Host "`n⚠️ Problemi rilevati durante l'esecuzione:"
     foreach ($msg in $Script:FailureMessages) {
